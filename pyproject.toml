@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jira-fetch"
+version = "0.1.0"
+description = "CLI tool to fetch Jira issues via REST API"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.32",
+    "pydantic-settings>=2.0",
+    "click>=8.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+jira-fetch = "jira_fetch.cli:main"
