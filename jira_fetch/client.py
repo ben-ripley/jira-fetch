@@ -13,7 +13,7 @@ class JiraClient:
         self._session.auth = (settings.JIRA_USER_EMAIL, settings.JIRA_API_TOKEN)
         self._session.headers.update({"Accept": "application/json"})
 
-    def get(self, path: str) -> dict:
+    def get(self, path: str, params: dict | None = None) -> dict:
         url = f"{self._settings.JIRA_BASE_URL}{path}"
         max_attempts = self._settings.RETRY_MAX_ATTEMPTS
         backoff_base = self._settings.RETRY_BACKOFF_BASE
@@ -21,7 +21,7 @@ class JiraClient:
 
         for attempt in range(max_attempts):
             try:
-                response = self._session.get(url, timeout=30)
+                response = self._session.get(url, params=params, timeout=30)
 
                 if self._debug:
                     print(f"[debug] GET {url}")

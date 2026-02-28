@@ -10,7 +10,9 @@ console = Console()
 @click.option("--jql", required=True, help="JQL query string to fetch issues")
 @click.option("--output-dir", default=None, help="Override output directory")
 @click.option("--debug", is_flag=True, default=False, help="Print request/response details")
-def main(jql: str, output_dir: str | None, debug: bool) -> None:
+@click.option("--include-worklogs", is_flag=True, default=False, help="Fetch and attach worklogs to each issue")
+@click.option("--include-changelogs", is_flag=True, default=False, help="Fetch and attach changelogs to each issue")
+def main(jql: str, output_dir: str | None, debug: bool, include_worklogs: bool, include_changelogs: bool) -> None:
     """Fetch Jira issues matching a JQL query and write paginated JSON output files."""
     from pydantic import ValidationError
     from pydantic_settings import BaseSettings
@@ -30,6 +32,10 @@ def main(jql: str, output_dir: str | None, debug: bool) -> None:
 
     if output_dir is not None:
         settings.OUTPUT_DIR = output_dir
+    if include_worklogs:
+        settings.INCLUDE_WORKLOGS = True
+    if include_changelogs:
+        settings.INCLUDE_CHANGELOGS = True
 
     console.print("[bold]jira-fetch[/bold]\n")
     fetch_issues(jql, settings, debug=debug)

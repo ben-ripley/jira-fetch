@@ -6,11 +6,11 @@ A Python CLI tool that exports Jira issues matching a JQL query to paginated JSO
 
 Fetching runs in three phases:
 
-1. **Count** — calls `POST /rest/api/3/search/approximate-count` to get the total number of matching issues upfront
-2. **Collect IDs** — paginates through `POST /rest/api/3/search/jql` using cursor-based pagination (`nextPageToken`) to collect all matching issue IDs
-3. **Fetch full detail** — calls `GET /rest/api/3/issue/{id}` for each issue individually to retrieve all fields
+1. **Count** — gets the total number of matching issues upfront
+2. **Collect IDs** — collect all issue IDs matching JQL
+3. **Fetch full detail** — fetch each issue individually to retrieve all fields, comments, worklogs, changelogs, etc.
 
-Output is written in batches to `output/` as JSON files named with a UTC timestamp and page index, e.g. `2026-02-27T17:07:17.730Z-1.json`. Each run produces its own timestamped set of files so successive runs never overwrite each other.
+Output is written in batches to `output/` as JSON files named with a UTC timestamp and page index, e.g. `2026-02-27T17:07:17.730-1.json`. Each run produces its own timestamped set of files so successive runs never overwrite each other.
 
 ## Features
 
@@ -69,6 +69,8 @@ RETRY_MAX_ATTEMPTS=3
 RETRY_BACKOFF_BASE=2.0
 RETRY_BACKOFF_MAX=60.0
 REQUEST_DELAY_SECONDS=0.5
+INCLUDE_WORKLOGS=false
+INCLUDE_CHANGELOGS=false
 ```
 
 Generate an API token at: https://id.atlassian.com/manage-profile/security/api-tokens
@@ -81,6 +83,9 @@ jira-fetch --jql 'project = MYPROJ AND status = "In Progress"'
 
 # Override output directory
 jira-fetch --jql 'project = MYPROJ' --output-dir ./exports
+
+# Include worklogs and changelogs
+jira-fetch --jql 'project = MYPROJ' --include-worklogs --include-changelogs
 
 # Debug mode (prints request/response details)
 jira-fetch --jql 'project = MYPROJ' --debug
@@ -97,7 +102,7 @@ jira-fetch
 Total issues to fetch: 1032
 Progress: 256/1032 (24.8%)   ETA: 18 mins - 2:46 PM
 ...
-Done. Wrote 1032 issues.
+Done. Fetched: 1032 issues, 3421 comments, 198 worklogs, 4102 changelogs.
 ```
 
 Output files contain arrays of full Jira issue objects as returned by the REST API:
@@ -111,11 +116,16 @@ Output files contain arrays of full Jira issue objects as returned by the REST A
       "summary": "...",
       "status": { ... },
       ...
-    }
+    },
+    "comments": [ ... ],
+    "worklogs": [ ... ],
+    "changelogs": [ ... ]
   },
   ...
 ]
 ```
+
+Comments are always fetched. `worklogs` and `changelogs` are only present when enabled via `--include-worklogs` / `--include-changelogs` or the corresponding `.env` settings.
 
 ## Error handling
 

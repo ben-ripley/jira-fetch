@@ -12,8 +12,8 @@ console = Console()
 
 
 def fetch_issues(jql: str, settings: Settings, debug: bool = False) -> None:
-    _now = datetime.datetime.now(datetime.timezone.utc)
-    run_id = _now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{_now.microsecond // 1000:03d}Z"
+    _now = datetime.datetime.now()
+    run_id = _now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{_now.microsecond // 1000:03d}"
     client = JiraClient(settings, debug=debug)
     writer = OutputWriter(settings, run_id=run_id)
 
@@ -38,6 +38,9 @@ def fetch_issues(jql: str, settings: Settings, debug: bool = False) -> None:
 
     total = len(issue_ids)
     fetched = 0
+    total_comments = 0
+    total_worklogs = 0
+    total_changelogs = 0
     start_time = time.monotonic()
 
     for issue_id in issue_ids:
@@ -46,6 +49,20 @@ def fetch_issues(jql: str, settings: Settings, debug: bool = False) -> None:
         except RuntimeError as e:
             _log_error(issue_id, str(e))
             continue
+
+        comments = _fetch_paginated(issue_id, "comment", "comments", client, settings)
+        issue["comments"] = comments
+        total_comments += len(comments)
+
+        if settings.INCLUDE_WORKLOGS:
+            worklogs = _fetch_paginated(issue_id, "worklog", "worklogs", client, settings)
+            issue["worklogs"] = worklogs
+            total_worklogs += len(worklogs)
+
+        if settings.INCLUDE_CHANGELOGS:
+            changelogs = _fetch_paginated(issue_id, "changelog", "values", client, settings)
+            issue["changelogs"] = changelogs
+            total_changelogs += len(changelogs)
 
         writer.add_issues([issue])
         fetched += 1
@@ -57,7 +74,13 @@ def fetch_issues(jql: str, settings: Settings, debug: bool = False) -> None:
 
     writer.flush()
     print()
-    console.print(f"Done. Wrote {fetched} issues.")
+
+    summary = f"Done. Fetched: {fetched} issues, {total_comments} comments"
+    if settings.INCLUDE_WORKLOGS:
+        summary += f", {total_worklogs} worklogs"
+    if settings.INCLUDE_CHANGELOGS:
+        summary += f", {total_changelogs} changelogs"
+    console.print(summary + ".")
 
 
 def _collect_issue_ids(jql: str, client: JiraClient, settings: Settings) -> list[str]:
@@ -89,6 +112,39 @@ def _collect_issue_ids(jql: str, client: JiraClient, settings: Settings) -> list
         time.sleep(settings.REQUEST_DELAY_SECONDS)
 
     return ids
+
+
+def _fetch_paginated(
+    issue_id: str,
+    path_suffix: str,
+    response_key: str,
+    client: JiraClient,
+    settings: Settings,
+) -> list:
+    results = []
+    start_at = 0
+    page_size = settings.JIRA_MAX_RESULTS_PER_PAGE
+
+    while True:
+        try:
+            data = client.get(
+                f"/rest/api/3/issue/{issue_id}/{path_suffix}",
+                params={"startAt": start_at, "maxResults": page_size},
+            )
+        except RuntimeError as e:
+            _log_error(f"{issue_id}/{path_suffix}@{start_at}", str(e))
+            break
+
+        page = data.get(response_key, [])
+        results.extend(page)
+        start_at += len(page)
+
+        if start_at >= data.get("total", 0) or not page:
+            break
+
+        time.sleep(settings.REQUEST_DELAY_SECONDS)
+
+    return results
 
 
 def _format_eta(fetched: int, total: int, start_time: float) -> str:

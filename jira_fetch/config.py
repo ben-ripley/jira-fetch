@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     RETRY_BACKOFF_BASE: float = 2.0
     RETRY_BACKOFF_MAX: float = 60.0
     REQUEST_DELAY_SECONDS: float = 0.5
+    INCLUDE_WORKLOGS: bool = False
+    INCLUDE_CHANGELOGS: bool = False
 
     @field_validator("JIRA_BASE_URL")
     @classmethod
