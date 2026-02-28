@@ -11,9 +11,9 @@ from .writer import OutputWriter
 console = Console()
 
 
-def fetch_issues(jql: str, settings: Settings, debug: bool = False) -> None:
+def fetch_issues(jql: str, settings: Settings, debug: bool = False, output_file: Optional[str] = None) -> None:
     _now = datetime.datetime.now()
-    run_id = _now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{_now.microsecond // 1000:03d}"
+    run_id = output_file if output_file is not None else _now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{_now.microsecond // 1000:03d}"
     client = JiraClient(settings, debug=debug)
     writer = OutputWriter(settings, run_id=run_id)
 

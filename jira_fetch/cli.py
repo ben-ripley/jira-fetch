@@ -12,7 +12,8 @@ console = Console()
 @click.option("--debug", is_flag=True, default=False, help="Print request/response details")
 @click.option("--include-worklogs", is_flag=True, default=False, help="Fetch and attach worklogs to each issue")
 @click.option("--include-changelogs", is_flag=True, default=False, help="Fetch and attach changelogs to each issue")
-def main(jql: str, output_dir: str | None, debug: bool, include_worklogs: bool, include_changelogs: bool) -> None:
+@click.option("--output-file", default=None, help="Override output filename prefix (e.g. 'AMF' produces AMF-1.json, AMF-2.json, ...)")
+def main(jql: str, output_dir: str | None, debug: bool, include_worklogs: bool, include_changelogs: bool, output_file: str | None) -> None:
     """Fetch Jira issues matching a JQL query and write paginated JSON output files."""
     from pydantic import ValidationError
     from pydantic_settings import BaseSettings
@@ -38,4 +39,4 @@ def main(jql: str, output_dir: str | None, debug: bool, include_worklogs: bool, 
         settings.INCLUDE_CHANGELOGS = True
 
     console.print("[bold]jira-fetch[/bold]\n")
-    fetch_issues(jql, settings, debug=debug)
+    fetch_issues(jql, settings, debug=debug, output_file=output_file)
